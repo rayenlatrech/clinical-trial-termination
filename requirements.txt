@@ -1,0 +1,16 @@
+# data handling
+pandas
+numpy
+pyarrow              # read/write parquet files
+# database access
+sqlalchemy
+psycopg[binary]      # PostgreSQL driver (psycopg 3)
+python-dotenv        # loads DB credentials from .env
+# modelling
+scikit-learn
+lightgbm
+# plots
+matplotlib
+seaborn
+# lets VS Code run notebooks in this environment
+ipykernel

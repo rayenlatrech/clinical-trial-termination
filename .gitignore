@@ -1,0 +1,25 @@
+# --- Secrets ---
+.env
+
+# --- Data (never commit data: too big, and it's re-downloadable) ---
+data/
+*.dmp
+*.zip
+*.parquet
+*.csv
+models/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
