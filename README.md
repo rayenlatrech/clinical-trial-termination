@@ -1,6 +1,6 @@
 # Predicting clinical trial termination
 
-> Status: 🚧 work in progress (week 1: data exploration)
+> Status: 🚧 work in progress. Week 1 (cohort and labels) is done; week 2 (features and baselines) is next.
 
 Can we tell early, using only what a trial's public registration says, whether it will stop before it finishes?
 
@@ -24,21 +24,45 @@ Can we tell early, using only what a trial's public registration says, whether i
 
 **Excluded, then counted and reported (not dropped silently):**
 - trials still ongoing in 2026 (recruiting, active, enrolling by invitation, not yet recruiting)
-- *Suspended* and *Unknown status* trials
+- *Suspended*, *Unknown status* and other statuses (e.g. expanded access)
 - trials that can't be found in the 2026 snapshot
 
 **Evaluation.**
-- Time-based split: train on trials registered earlier, test on the most recently registered ones. No random split.
+- Time-based split by registration year: **train ≤ 2016, validation 2017, test 2018**. No random split. The test set is used once, at the end.
 - Metrics: PR-AUC (the positive class is the minority), ROC-AUC, and calibration.
 
 **Baselines to beat.**
 1. Predict the majority class for every trial.
 2. Logistic regression on trial phase and sponsor type only.
 
-### Open decisions
-- [ ] **Withdrawn vs Terminated:** one class, or separate? (Withdrawn means it stopped before enrolling anyone; Terminated means it stopped after starting.)
-- [ ] **Unknown status:** excluding these may bias the results, because abandoned trials often end up as "unknown". Check how many there are before deciding.
-- [ ] **The exact registration date** used to split training and test data.
+### Decisions (made after exploring the data, 28 Sep 2026)
+- [x] **Withdrawn and Terminated form one positive class** ("stopped early"). Withdrawn trials come almost entirely from trials that were *not yet recruiting* in 2018 (10.6% of them, vs 1.5% of recruiting trials). So the 2018 status is kept as a feature, and results are also reported **for 2018-recruiting trials only**, to show the model isn't just learning "not yet recruiting → withdrawn".
+- [x] **Unknown status is excluded from the main analysis**, and a **sensitivity check** counts it as stopped early (`label_sensitivity`). It's 24% of the cohort, so this is the largest threat to validity (see Limitations).
+- [x] **Split by registration year:** train ≤ 2016, validation 2017, test 2018. The stopped-early rate is stable at about 20% across 2012–2018, so the split isn't distorted by a changing base rate.
+
+## Cohort
+
+Built in [`sql/05_cohort_view.sql`](sql/05_cohort_view.sql) as the view `analysis.cohort` (one row per trial).
+
+| Group (status in Sep 2026) | Trials | |
+|---|---|---|
+| **Cohort**: interventional, recruiting or not yet recruiting in Dec 2018 | **47,210** | 100% |
+| Completed → label 0 | 25,420 | 53.8% |
+| Terminated → label 1 | 4,846 | 10.3% |
+| Withdrawn → label 1 | 1,637 | 3.5% |
+| Unknown status → excluded | 11,326 | 24.0% |
+| Still ongoing or other → excluded | 3,711 | 7.9% |
+| Suspended → excluded | 207 | 0.4% |
+| Not found in 2026 → excluded | 63 | 0.1% |
+| **Labelled trials used for modelling** | **31,903** | 20.3% positive |
+
+| Split | Registered | Labelled trials |
+|---|---|---|
+| train | ≤ 2016 | 11,776 |
+| validation | 2017 | 9,157 |
+| test | 2018 | 10,970 |
+
+With about 20% positives, a random classifier scores a **PR-AUC of about 0.20**. That's the reference point for every result.
 
 ## Data
 
@@ -52,6 +76,8 @@ Can we tell early, using only what a trial's public registration says, whether i
 The data isn't included in this repo because it's too large. See **Setup** to rebuild it locally. Data issues found along the way are recorded in [`docs/data_quality_log.md`](docs/data_quality_log.md).
 
 ## Repository structure
+
+In the database, the raw snapshots live in the schemas `snap_2018_12` and `snap_2026_09`, and the cleaned layer built by this project lives in `analysis`.
 
 ```
 sql/              SQL queries (exploration, cohort, features)
@@ -80,8 +106,14 @@ docs/             data-quality log and notes
    pip install -r requirements.txt
    ```
 5. Copy `.env.example` to `.env` and fill in your database password.
+6. Create the analysis layer: run `sql/05_cohort_view.sql` once against the `aact` database.
+
+## Limitations (so far)
+- **Unknown status (24% of the cohort).** These trials stopped being updated, and many are probably abandoned. Excluding them likely makes the stopped-early rate look lower than it is. A sensitivity check addresses this.
+- **Still-ongoing trials are excluded (7.9%).** Trials that are still running after 8 years are left out, so the labelled set leans towards shorter trials.
+- **Features are the registry's contents**, not the sponsor's internal plans, so the model can only use what was made public.
 
 ## Roadmap
-- [ ] Week 1: explore both snapshots; table of how 2018 statuses ended up in 2026
-- [ ] Week 2: cohort and label, features, leakage check, baselines
+- [x] Week 1: explore both snapshots; table of how 2018 statuses ended up in 2026; cohort and label view
+- [ ] Week 2: features (2018 snapshot only), leakage check, baselines
 - [ ] Week 3: gradient boosting, time-based evaluation, error analysis, write-up
