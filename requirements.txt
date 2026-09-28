@@ -4,7 +4,7 @@ numpy
 pyarrow              # read/write parquet files
 # database access
 sqlalchemy
-psycopg[binary]      # PostgreSQL driver (psycopg 3)
+psycopg2-binary      # PostgreSQL driver 
 python-dotenv        # loads DB credentials from .env
 # modelling
 scikit-learn

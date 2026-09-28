@@ -42,7 +42,7 @@ Can we tell early, using only what a trial's public registration says, whether i
 
 ## Cohort
 
-Built in [`sql/05_cohort_view.sql`](sql/05_cohort_view.sql) as the view `analysis.cohort` (one row per trial).
+Built in [`sql/05_cohort_view.sql`](sql/05_cohort_view.sql) as the view `analysis.cohort` (one row per trial). Every column and status is explained in [`docs/cohort_guide.md`](docs/cohort_guide.md).
 
 | Group (status in Sep 2026) | Trials | |
 |---|---|---|
