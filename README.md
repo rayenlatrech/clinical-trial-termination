@@ -73,7 +73,7 @@ With about 20% positives, a random classifier scores a **PR-AUC of about 0.20**.
 | Dec 2018 | 291,109 |
 | Sep 2026 | 604,561 |
 
-The data isn't included in this repo because it's too large. See **Setup** to rebuild it locally. Data issues found along the way are recorded in [`docs/data_quality_log.md`](docs/data_quality_log.md).
+The data isn't included in this repo because it's too large. See **Setup** to rebuild it locally. Data issues found along the way are recorded in [`docs/data_quality_log.md`](docs/data_quality_log.md). Candidate features and the leakage review are in [`docs/feature_list.md`](docs/feature_list.md).
 
 ## Repository structure
 
