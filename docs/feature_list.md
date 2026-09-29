@@ -3,7 +3,7 @@
 Every candidate feature, where it comes from, and whether it was **known in December 2018**. Features may only come from the `snap_2018_12` schema. Anything from 2026 is the outcome.
 
 Status: ✅ explored · ⏳ not explored yet
-Last updated: 29 Sep 2026 (after notebook 02, Section 2)
+Last updated: 29 Sep 2026 (after notebook 02, Section 3)
 
 ---
 
@@ -50,21 +50,23 @@ Missing % is measured on the 47,210 cohort trials.
 
 ---
 
-## 3. Many-per-trial features ⏳ (notebook 02, Section 3)
+## 3. Many-per-trial features ✅
 
-| Candidate feature | Group | Source | Known in Dec 2018? | Decision |
-|---|---|---|---|---|
-| number of sites | Sites | `facilities` (count per trial) | ⏳ check | ⏳ |
-| has a US site | Sites | `facilities.country` | ⏳ | ⏳ |
-| number of countries | Sites | `countries` (check the `removed` column) | ⏳ | ⏳ |
-| lead sponsor type | Sponsor | `sponsors.agency_class` where lead | ⏳ | ⏳ |
-| number of collaborators | Sponsor | `sponsors` (collaborator rows) | ⏳ | ⏳ |
-| intervention type(s) | Intervention | `interventions.intervention_type` | ⏳ | ⏳ |
-| number of interventions | Intervention | `interventions` (count) | ⏳ | ⏳ |
-| number of conditions | Disease area | `conditions` (count) | ⏳ | ⏳ |
-| oncology yes/no | Disease area | `conditions.name` keywords | ⏳ | ⏳ |
+Each table is aggregated to one row per trial (a trial with no rows gets 0).
 
----
+| Feature | Group | Source | What the data shows | Known in Dec 2018? | Decision |
+|---|---|---|---|---|---|
+| `n_sites` | Sites | count of `facilities` rows | median 1, mean 6.3, max 1,457; some trials have 0 | ✅ Sites listed in the 2018 record | **Keep**, log scale |
+| `has_us_site` | Sites | `facilities.country` = United States | the US is in 18,544 trials (39%) | ✅ | **Keep** |
+| `single_site` | Sites | `n_sites` = 1 | the median trial is single-site | ✅ | **Keep** (or let the model use `n_sites`) |
+| `n_countries` | Sites | `countries` excluding `removed` | median 1, max 49; matches `facilities` for 100% of trials | ✅ | **Keep** |
+| `had_country_removed` | Sites | `countries.removed` = True | 519 trials (1.1%) | ✅ The removal had already happened by Dec 2018 | **Keep**: a possible "trouble" signal, but rare |
+| `lead_sponsor_class` | Sponsor | `sponsors.agency_class` where lead | exactly 1 lead per trial; Other 81.1%, Industry 16.5%, NIH 1.3%, U.S. Fed 1.1% | ✅ | **Keep**; consider merging NIH and U.S. Fed (both small) |
+| `n_collaborators` | Sponsor | count of collaborator rows | median 0, max 68 | ✅ | **Keep** |
+| `n_interventions` | Intervention | count of `interventions` rows | min 1, median 2, max 35 | ✅ | **Keep** |
+| intervention type flags | Intervention | one yes/no per type (`is_drug`, `is_device`, …) | a trial can combine types; Drug 43.9%, Other 20.4%, Device 15.8%, Behavioral 12.4%, Procedure 12.0%, Biological 7.1% | ✅ | **Keep** the main types; group the rare ones |
+| `n_conditions` | Disease area | count of `conditions` rows | min 1, median 1, max 90 | ✅ | **Keep** |
+| `is_oncology` | Disease area | cancer keywords in `conditions.name` | 26.0% of trials; a sample showed only genuine cancers | ✅ | **Keep** |
 
 ## 4. `calculated_values` ⏳ (notebook 02, Section 4)
 
