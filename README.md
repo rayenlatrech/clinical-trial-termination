@@ -1,6 +1,6 @@
 # Predicting clinical trial termination
 
-> Status: 🚧 work in progress. Week 1 (cohort and labels) is done; week 2 (features and baselines) is next.
+> Status: 🚧 work in progress. Weeks 1–2 are done (cohort, labels, 38 features, baselines); week 3 (a stronger model and the final test) is next.
 
 Can we tell early, using only what a trial's public registration says, whether it will stop before it finishes?
 
@@ -108,6 +108,25 @@ docs/             data-quality log and notes
 5. Copy `.env.example` to `.env` and fill in your database password.
 6. Create the analysis layer: run `sql/05_cohort_view.sql` once against the `aact` database.
 
+## Results so far: baselines (validation set, 2017 registrations)
+
+Trained on trials registered up to 2016, scored on trials registered in 2017 (9,157 trials, 20.2% stopped early). The test set (2018) hasn't been used yet. See [`notebooks/03_baselines.ipynb`](notebooks/03_baselines.ipynb).
+
+| Model | PR-AUC | ROC-AUC | Brier |
+|---|---|---|---|
+| 0 · No model (predict the stop rate) | 0.202 | 0.500 | 0.161 |
+| 1 · Logistic regression, `phase` + lead sponsor type | 0.248 | 0.582 | 0.159 |
+| **2 · Logistic regression, all 38 features** | **0.383** | **0.695** | **0.148** |
+
+**What this shows:**
+- **Registration data alone carries a real but moderate signal.** With all features, PR-AUC nearly doubles compared with no model (0.38 vs 0.20). The two-feature model adds little, so most of the signal comes from the other features.
+- **No sign of leakage.** The scores are well below "too good to be true" for registry-only information.
+- **The strongest signals (coefficients, which show association, not cause):**
+  - towards *stopped early*: not yet recruiting in 2018, industry lead sponsor, a US site, being registered long before the start date
+  - towards *completed*: already recruiting, behavioural interventions, NIH or U.S. federal sponsors, health-services research, more sites
+- **Robustness:** on trials already recruiting in 2018 (8,050 trials, 17.3% stopped), the model still reaches PR-AUC 0.283 against a base rate of 0.173 (ROC-AUC 0.662). It isn't only learning "not yet recruiting → withdrawn", although the signal is weaker in that group.
+- **One surprise to investigate:** `overdue_2018` (still recruiting past the planned completion date) leans towards *completed*, not stopped.
+
 ## Limitations (so far)
 - **Unknown status (24% of the cohort).** These trials stopped being updated, and many are probably abandoned. Excluding them likely makes the stopped-early rate look lower than it is. A sensitivity check addresses this.
 - **Still-ongoing trials are excluded (7.9%).** Trials that are still running after 8 years are left out, so the labelled set leans towards shorter trials.
@@ -115,5 +134,5 @@ docs/             data-quality log and notes
 
 ## Roadmap
 - [x] Week 1: explore both snapshots; table of how 2018 statuses ended up in 2026; cohort and label view
-- [ ] Week 2: features (2018 snapshot only), leakage check, baselines
+- [x] Week 2: features (2018 snapshot only), leakage check, baselines (best PR-AUC 0.383 on validation)
 - [ ] Week 3: gradient boosting, time-based evaluation, error analysis, write-up

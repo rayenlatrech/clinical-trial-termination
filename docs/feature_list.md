@@ -3,7 +3,7 @@
 Every candidate feature, where it comes from, and whether it was **known in December 2018**. Features may only come from the `snap_2018_12` schema. Anything from 2026 is the outcome.
 
 Status: ✅ explored · ⏳ not explored yet
-Last updated: 29 Sep 2026 (after notebook 02, Section 3)
+Last updated: 29 Sep 2026 (after notebook 02, Section 4: exploration complete)
 
 ---
 
@@ -68,11 +68,23 @@ Each table is aggregated to one row per trial (a trial with no rows gets 0).
 | `n_conditions` | Disease area | count of `conditions` rows | min 1, median 1, max 90 | ✅ | **Keep** |
 | `is_oncology` | Disease area | cancer keywords in `conditions.name` | 26.0% of trials; a sample showed only genuine cancers | ✅ | **Keep** |
 
-## 4. `calculated_values` ⏳ (notebook 02, Section 4)
+## 4. `calculated_values` ✅
 
-Each column still needs a decision: does it describe the trial as of 2018, or the future?
+A pre-computed AACT table (16 columns in the 2018 snapshot). Mostly duplicates of what we built ourselves, plus a few *results* columns that must not be used.
 
----
+| Column | Missing | Verdict | Why |
+|---|---|---|---|
+| `number_of_facilities` | 11.0% | duplicate of `n_sites` | Matches our count for all 47,210 trials; NaN = 0 sites |
+| `has_us_facility` | 11.0% | duplicate of `has_us_site` | Agrees except for 9 trials |
+| `has_single_facility` | 0% | duplicate of `single_site` | |
+| `minimum_age_num` / `_unit`, `maximum_age_num` / `_unit` | 5.2% / 46.8% | ✅ **use as the source for ages** | Already split into number + unit; units still need cleaning (leading space, singular/plural) and converting to years |
+| `registered_in_calendar_year` | 0% | redundant | Same as `registration_year` (which defines the split) |
+| `nlm_download_date` | 0% | ❌ not a feature | The snapshot date, identical for all trials |
+| `actual_duration` | 99.1% | ❌ **leakage** | Only known after a trial ends |
+| `were_results_reported`, `months_to_report_results` | 0% / 100% | ❌ **leakage** | Results information |
+| `number_of_sae_subjects`, `number_of_nsae_subjects` | 100% | ❌ **leakage** (empty anyway) | Adverse events from results |
+
+**New feature from this section:** `no_sites_listed` (about 11% of the cohort had no sites registered in Dec 2018).
 
 ## Never allowed as features
-`status_2026`, `bucket`, `label`, `label_sensitivity` (they are the outcome), `why_stopped`, any "actual" dates or counts, and anything from `snap_2026_09`.
+`status_2026`, `bucket`, `label`, `label_sensitivity` (they are the outcome), `why_stopped`, `actual_duration`, `were_results_reported`, `months_to_report_results`, adverse-event counts, any "actual" dates or counts, and anything from `snap_2026_09`.
