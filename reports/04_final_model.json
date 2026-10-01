@@ -1,0 +1,24 @@
+{
+  "primary_model": "logistic_regression",
+  "logistic_regression_params": {
+    "max_iter": 2000
+  },
+  "lightgbm_params": {
+    "num_leaves": 15,
+    "min_child_samples": 20,
+    "n_estimators": 200
+  },
+  "n_features": 41,
+  "valid_scores": {
+    "logistic_regression": {
+      "pr_auc": 0.383,
+      "roc_auc": 0.696,
+      "brier": 0.148
+    },
+    "lightgbm": {
+      "pr_auc": 0.391,
+      "roc_auc": 0.708,
+      "brier": 0.146
+    }
+  }
+}

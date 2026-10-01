@@ -3,7 +3,7 @@
 Every candidate feature, where it comes from, and whether it was **known in December 2018**. Features may only come from the `snap_2018_12` schema. Anything from 2026 is the outcome.
 
 Status: ✅ explored · ⏳ not explored yet
-Last updated: 29 Sep 2026 (after notebook 02, Section 4: exploration complete)
+Last updated: 30 Sep 2026 (eligibility-criteria features added after the literature review)
 
 ---
 
@@ -84,7 +84,31 @@ A pre-computed AACT table (16 columns in the 2018 snapshot). Mostly duplicates o
 | `were_results_reported`, `months_to_report_results` | 0% / 100% | ❌ **leakage** | Results information |
 | `number_of_sae_subjects`, `number_of_nsae_subjects` | 100% | ❌ **leakage** (empty anyway) | Adverse events from results |
 
+**Leakage check result:** 288 labelled trials already had an `actual_duration` in the 2018 snapshot, and only **6.9%** of them later stopped early, against **20.4%** for the rest. The column is clearly related to the outcome, which confirms it must stay out. `were_results_reported` was True for a single trial.
+
 **New feature from this section:** `no_sites_listed` (about 11% of the cohort had no sites registered in Dec 2018).
+
+## 5. Final feature set: `analysis.features` (`sql/07_features_view.sql`)
+
+One row per cohort trial (47,210). **41 features** since 30 Sep: 9 categorical, 9 log-numeric, 6 numeric, 17 binary. SQL applies only **fixed rules** (placeholders → NULL, units → years, counts per trial). Anything *learned* from the data (imputing, encoding, scaling) happens later in Python, on the training set only.
+
+| Group | Columns |
+|---|---|
+| Keys, label, split | `nct_id`, `label`, `label_sensitivity`, `split`, `registration_date`, `registration_year` |
+| 2018 status | `status_2018` |
+| Design | `phase`, `number_of_arms`, `has_dmc` (yes/no/unknown), `allocation` (NULL + single group → "Single group"), `masking`, `primary_purpose`, `intervention_model` |
+| Size and timing | `enrollment_target` (99,999,999 → NULL), `planned_duration_months` (dates after 2050 → NULL), `months_registration_to_start` (negative = registered after starting), `overdue_2018` (planned completion before 2018-11-30) |
+| Population | `gender`, `accepts_healthy_volunteers` ('' → NULL), `min_age_years`, `max_age_years`, `no_min_age`, `no_max_age` |
+| Sites and countries | `n_sites`, `no_sites_listed`, `single_site`, `has_us_site`, `n_countries` (removed excluded), `had_country_removed` |
+| Sponsor | `lead_sponsor_class`, `n_collaborators` |
+| Interventions | `n_interventions`, `n_intervention_types`, `is_drug`, `is_device`, `is_biological`, `is_procedure`, `is_behavioral`, `is_radiation`, `is_dietary_supplement`, `is_other_intervention` |
+| Disease area | `n_conditions`, `is_oncology` |
+| Eligibility criteria (added 30 Sep) | `criteria_words`, `n_inclusion_criteria`, `n_exclusion_criteria` (log-transformed for linear models) |
+
+Not features: `nct_id`, `label`, `label_sensitivity`, `split`, `registration_date` (identifiers, target and split). `registration_year` is only used for the split.
+
+### Why the eligibility-criteria features were added (30 Sep 2026)
+A review of published work on predicting trial termination from ClinicalTrials.gov found **eligibility-criteria complexity** (word counts, number of criteria) among the most important registry features (Elkin & Zhu, *Scientific Reports* 2021; a 2025 accrual-failure study in *Scientific Reports*). The criteria text is part of the 2018 registration record, so it's known in Dec 2018. The features were added **before any test-set scoring**, and notebook 04 was re-run with them.
 
 ## Never allowed as features
 `status_2026`, `bucket`, `label`, `label_sensitivity` (they are the outcome), `why_stopped`, `actual_duration`, `were_results_reported`, `months_to_report_results`, adverse-event counts, any "actual" dates or counts, and anything from `snap_2026_09`.

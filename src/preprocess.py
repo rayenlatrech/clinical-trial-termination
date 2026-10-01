@@ -44,3 +44,21 @@ def make_preprocessor(categorical=(), log_numeric=(), numeric=(), binary=()):
     if binary:
         branches.append(("bin", SimpleImputer(strategy="most_frequent"), list(binary)))
     return ColumnTransformer(branches, verbose_feature_names_out=False)
+
+
+def make_tree_preprocessor(categorical):
+    """Preprocessing for tree models (e.g. LightGBM).
+
+    Trees don't need scaling or log transforms (a split on log(x) is the same as a
+    split on x), and LightGBM handles missing numbers itself. So only the text columns
+    are one-hot encoded; every other column passes through unchanged.
+    """
+    return ColumnTransformer(
+        [("cat", Pipeline([
+            ("impute", SimpleImputer(strategy="constant", fill_value="missing")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+        ]), list(categorical))],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+    )
+

@@ -87,6 +87,41 @@ condition_agg AS (
 ),
 
 -- ---------------------------------------------------------------------------
+-- Eligibility-criteria complexity (the free-text inclusion/exclusion criteria).
+-- Published work on trial termination found these among the strongest registry
+-- signals (Elkin & Zhu 2021; a 2025 accrual-failure study in Scientific Reports).
+-- ---------------------------------------------------------------------------
+criteria_parts AS (
+    SELECT
+        el.nct_id,
+        NULLIF(TRIM(el.criteria), '')                          AS criteria,
+        -- where the exclusion part starts (0 if the text has no exclusion heading)
+        POSITION('exclusion criteria' IN LOWER(el.criteria))   AS excl_pos
+    FROM snap_2018_12.eligibilities el
+    WHERE el.nct_id IN (SELECT nct_id FROM analysis.cohort)
+),
+criteria_stats AS (
+    -- a criterion = a line starting with a bullet ('-', '*') or a number ('1.', '2)')
+    SELECT
+        nct_id,
+        CASE WHEN criteria IS NULL THEN NULL
+             ELSE ARRAY_LENGTH(REGEXP_SPLIT_TO_ARRAY(criteria, '\s+'), 1)
+        END AS criteria_words,
+        CASE WHEN criteria IS NULL THEN NULL
+             ELSE (SELECT COUNT(*) FROM REGEXP_MATCHES(
+                       CASE WHEN excl_pos > 0 THEN LEFT(criteria, excl_pos - 1) ELSE criteria END,
+                       '(^|\n)[ \t]*(-|\*|[0-9]+[.)])[ \t]', 'g'))
+        END AS n_inclusion_criteria,
+        CASE WHEN criteria IS NULL THEN NULL
+             WHEN excl_pos = 0 THEN 0
+             ELSE (SELECT COUNT(*) FROM REGEXP_MATCHES(
+                       SUBSTRING(criteria FROM excl_pos),
+                       '(^|\n)[ \t]*(-|\*|[0-9]+[.)])[ \t]', 'g'))
+        END AS n_exclusion_criteria
+    FROM criteria_parts
+),
+
+-- ---------------------------------------------------------------------------
 -- Age units: ' Years', 'Year', ' Months', ... -> one factor that converts to years
 -- ---------------------------------------------------------------------------
 age_units AS (
@@ -175,6 +210,9 @@ SELECT
     END, 3)                                                   AS max_age_years,
     (a.minimum_age_num IS NULL)::int                          AS no_min_age,
     (a.maximum_age_num IS NULL)::int                          AS no_max_age,
+    cs.criteria_words,
+    cs.n_inclusion_criteria,
+    cs.n_exclusion_criteria,
 
     -- sites and countries (no rows in the table -> 0)
     COALESCE(sa.n_sites, 0)                                   AS n_sites,
@@ -209,6 +247,7 @@ LEFT JOIN snap_2018_12.studies        s   ON s.nct_id   = c.nct_id
 LEFT JOIN snap_2018_12.designs        d   ON d.nct_id   = c.nct_id
 LEFT JOIN snap_2018_12.eligibilities  e   ON e.nct_id   = c.nct_id
 LEFT JOIN age_units                   a   ON a.nct_id   = c.nct_id
+LEFT JOIN criteria_stats              cs  ON cs.nct_id  = c.nct_id
 LEFT JOIN site_agg                    sa  ON sa.nct_id  = c.nct_id
 LEFT JOIN country_agg                 ca  ON ca.nct_id  = c.nct_id
 LEFT JOIN sponsor_agg                 spa ON spa.nct_id = c.nct_id
@@ -256,3 +295,14 @@ FROM analysis.features;
 -- 5) Age conversion sanity check: every value should be between 0 and ~120 years
 SELECT MIN(min_age_years), MAX(min_age_years), MIN(max_age_years), MAX(max_age_years)
 FROM analysis.features;
+
+-- 6) Eligibility-criteria features: typical trials list a handful of inclusion and
+--    exclusion criteria and a few hundred words; NULL only when the text is missing
+SELECT
+    COUNT(*) FILTER (WHERE criteria_words IS NULL)                         AS null_criteria,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY criteria_words)            AS median_words,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY n_inclusion_criteria)      AS median_inclusion,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY n_exclusion_criteria)      AS median_exclusion,
+    ROUND(100.0 * AVG((n_inclusion_criteria = 0)::int), 1)                 AS pct_no_inclusion_bullets
+FROM analysis.features;
+
